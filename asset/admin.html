@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin chat</title>
+    <link href="/styles.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="default">
+      <h3>Chat</h3>
+      <div class="messages"></div>
+      <form action="" autocomplete="off">
+        <input type="text" name="message" class="message" autocomplete="off"/>
+      </form>
+    </div>
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script src="/jquery-1.11.1.js"></script>
+    <script>
+      var socket = io();
+      socket.on('admin_created', function(msg) {
+          console.log('admin_created', msg);
+      });
+
+      socket.on('new_room', function(msg) {
+        console.log("new_room", msg);
+        var b = $('div.' + msg.Room);
+        if (!b.length) {
+            b = $('div.default').clone();
+            b.addClass("chat-window")
+            .removeClass('default')
+            .addClass(msg.Room)
+            .addClass('open')
+            .data('room', msg.Room);
+            $('body').append(b);
+        }
+        socket.emit('room_opened', { Room: msg.Room });
+      });
+
+      socket.on('message', function(m2) {
+        console.log("Special room message", m2);
+        var messages = $("div.chat-window."+m2.Room).find('.messages');
+        messages.append("<div class='msg'><b>" + m2.Name +"</b>: " +m2.Msg+"</div>");
+      });
+
+      $(document).on('submit', '.chat-window form', function() {
+        var data = {
+          Room: $(this).parent().data('room'),
+          Msg:  $(this).find('.message').val()
+        };
+        socket.emit('message', data);
+        $(this).find('.message').val('');
+        return false;
+      });
+
+      socket.emit('admin', {"Key":"1234"});
+    </script>
+  </body>
+</html>
