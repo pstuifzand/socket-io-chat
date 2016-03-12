@@ -4,47 +4,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Admin chat</title>
     <link href="/styles.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+    <style>
+      input.message {
+        width:100%;
+        margin: 3px 3px 3px 0;
+        font-size: 20px;
+      }
+      div.footer {
+        position:fixed;
+        bottom:0;
+        right:0;
+        left:0;
+      }
+    </style>
   </head>
   <body>
-    <div class="default">
-      <h3>Chat</h3>
-      <div class="messages"></div>
-      <form action="" autocomplete="off">
-        <input type="text" name="message" class="message" autocomplete="off"/>
-      </form>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-xs-12">
+          <h1>Chat</h1>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-2">
+          <ul class="nav nav-pills nav-stacked room-tabs">
+          </ul>
+        </div>
+        <div class="col-xs-10">
+          <div class="tab-content">
+          </div>
+        </div>
+      </div>
+      <div class="row footer">
+        <div class="col-xs-2">
+        </div>
+        <div class="col-xs-10">
+          <form action="" autocomplete="off">
+            <input type="text" name="message" class="message" autocomplete="off"/>
+          </form>
+        </div>
+      </div>
     </div>
     <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
     <script src="/jquery-1.11.1.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <script src="/mustache.min.js"></script>
+    <script id="message-template" type="text/x-template">
+<div class='msg'><div class="name">{{Name}}</div><div class="text">{{Msg}}</div></div>
+    </script>
+    <script id="tab-template" type="text/x-template">
+<li role="presentation"><a href="#{{Room}}" data-toggle="pill" aria-controls="{{Room}}" data-room="{{Room}}">{{Room}}</a></li>
+    </script>
+    <script id="chat-window-template" type="text/x-template">
+<div role="tabpanel" class="tab-pane messages-window {{Room}}" id="{{Room}}" data-room="{{Room}}"><h2>{{Room}}</h2>
+  <div class="messages"></div>
+</div>
+    </script>
     <script>
       var socket = io();
+
       socket.on('admin_created', function(msg) {
           console.log('admin_created', msg);
+
+          $.getJSON('/api/rooms', function(data) {
+            $.each(data.Rooms, function(i, v) {
+              var template = $('#tab-template').html();
+              $('ul.room-tabs').append(Mustache.render(template, {Room:v.RoomId}));
+              var template2 = $('#chat-window-template').html();
+              $('div.tab-content').append(Mustache.render(template2, {Room:v.RoomId}));
+            });
+          });
       });
 
       socket.on('new_room', function(msg) {
         console.log("new_room", msg);
-        var b = $('div.' + msg.Room);
-        if (!b.length) {
-            b = $('div.default').clone();
-            b.addClass("chat-window")
-            .removeClass('default')
-            .addClass(msg.Room)
-            .addClass('open')
-            .data('room', msg.Room);
-            $('body').append(b);
-        }
+        var template = $('#tab-template').html();
+        $('ul.room-tabs').append(Mustache.render(template, {Room:msg.Room}));
+        var template2 = $('#chat-window-template').html();
+        $('div.tab-content').append(Mustache.render(template2, {Room:msg.Room}));
         socket.emit('room_opened', { Room: msg.Room });
       });
 
       socket.on('message', function(m2) {
-        console.log("Special room message", m2);
-        var messages = $("div.chat-window."+m2.Room).find('.messages');
-        messages.append("<div class='msg'><b>" + m2.Name +"</b>: " +m2.Msg+"</div>");
+        var messages = $("div.messages-window."+m2.Room).find('.messages');
+        if (messages.length) {
+          var template = $('#message-template').html();
+          messages.append(Mustache.render(template, m2));
+          messages.scrollTop(10000);
+        }
       });
 
-      $(document).on('submit', '.chat-window form', function() {
+      $(document).on('click', 'ul.nav li a', function() {
+        var room = $(this).data('room');
+        $.getJSON('/api/rooms/' + room, function(data) {
+          var messages = $("div.messages-window."+room).find('.messages');
+          $.each(data.Messages, function(i, v) {
+            var msg = $("<div class='msg'><div class='name'></div><div class='text'></div></div>");
+            $(msg).find('.name').html(v.Author);
+            $(msg).find('.text').html(v.Text);
+            messages.append(msg);
+          });
+          messages.scrollTop(10000);
+        });
+      });
+
+      $(document).on('submit', 'form', function() {
+        var room = $('.tab-content .tab-pane.active').data('room');
         var data = {
-          Room: $(this).parent().data('room'),
+          Room: room,
           Msg:  $(this).find('.message').val()
         };
         socket.emit('message', data);
