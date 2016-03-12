@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	socketio "github.com/googollee/go-socket.io"
 	"log"
+	"math/rand"
 	"net/http"
 	"regexp"
+	"time"
 )
 
 type AdminMessage struct {
@@ -89,7 +91,7 @@ func (handler *ConnectHandler) handleConnect(so socketio.Socket) {
 		roomId := msg.Room
 		if msg.Room == "" {
 			key := RandStringRunes(8)
-			roomId = "room:" + key
+			roomId = "room-" + key
 		}
 		m := make(map[string]interface{})
 		m["Room"] = roomId
@@ -120,6 +122,7 @@ func NewConnectHandler(backend Backend) *ConnectHandler {
 }
 
 func main() {
+	rand.Seed(time.Now().Unix())
 	roomUrlRegex = regexp.MustCompile("^/api/rooms/(room-\\w+)$")
 
 	backend, _ := NewRedisBackend(":7777")
