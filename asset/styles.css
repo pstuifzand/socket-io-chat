@@ -80,3 +80,11 @@
 .messages-window .messages .msg div.text {
   display:inline-block;
 }
+
+ul.nav li a.activity {
+  font-weight: bold;
+}
+
+ul.nav li.warning {
+  background:orange;
+}

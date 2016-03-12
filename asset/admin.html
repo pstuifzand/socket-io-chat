@@ -55,7 +55,7 @@
 <div class='msg'><div class="name">{{Name}}</div><div class="text">{{Msg}}</div></div>
     </script>
     <script id="tab-template" type="text/x-template">
-<li role="presentation"><a href="#{{Room}}" data-toggle="pill" aria-controls="{{Room}}" data-room="{{Room}}">{{Room}}</a></li>
+<li role="presentation"><a href="#{{Room}}" data-toggle="pill" aria-controls="{{Room}}" data-room="{{Room}}">{{Room}} <span class="count"></span></a></li>
     </script>
     <script id="chat-window-template" type="text/x-template">
 <div role="tabpanel" class="tab-pane messages-window {{Room}}" id="{{Room}}" data-room="{{Room}}"><h2>{{Room}}</h2>
@@ -70,16 +70,21 @@
 
           $.getJSON('/api/rooms', function(data) {
             $.each(data.Rooms, function(i, v) {
+              var room = $("div.messages-window."+v.RoomId);
+              if (room.length) return;
               var template = $('#tab-template').html();
               $('ul.room-tabs').append(Mustache.render(template, {Room:v.RoomId}));
               var template2 = $('#chat-window-template').html();
               $('div.tab-content').append(Mustache.render(template2, {Room:v.RoomId}));
+              socket.emit('room_opened', { Room: v.RoomId });
             });
           });
       });
 
       socket.on('new_room', function(msg) {
         console.log("new_room", msg);
+        var room = $("div.messages-window."+msg.Room);
+        if (room.length) return;
         var template = $('#tab-template').html();
         $('ul.room-tabs').append(Mustache.render(template, {Room:msg.Room}));
         var template2 = $('#chat-window-template').html();
@@ -88,16 +93,28 @@
       });
 
       socket.on('message', function(m2) {
-        var messages = $("div.messages-window."+m2.Room).find('.messages');
+        console.log('message received', m2);
+        var messages = $("div.messages-window.active."+m2.Room).find('.messages');
         if (messages.length) {
           var template = $('#message-template').html();
           messages.append(Mustache.render(template, m2));
           messages.scrollTop(10000);
+        } else {
+          var missedCounter = $("ul.nav li a[data-room='"+m2.Room+"'] span");
+          var count = parseInt(missedCounter.html());
+          if (!count) count = 0;
+          missedCounter.html(count+1);
+          missedCounter.parent().addClass('activity');
+          missedCounter.parent().parent().addClass('warning');
         }
       });
 
       $(document).on('click', 'ul.nav li a', function() {
         var room = $(this).data('room');
+        var missedCounter = $("ul.nav li a[data-room='"+room+"'] span");
+        missedCounter.html('');
+        missedCounter.parent().removeClass('activity');
+        missedCounter.parent().parent().removeClass('warning');
         $.getJSON('/api/rooms/' + room, function(data) {
           var messages = $("div.messages-window."+room).find('.messages');
           $.each(data.Messages, function(i, v) {
