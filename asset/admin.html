@@ -118,10 +118,8 @@
         $.getJSON('/api/rooms/' + room, function(data) {
           var messages = $("div.messages-window."+room).find('.messages');
           $.each(data.Messages, function(i, v) {
-            var msg = $("<div class='msg'><div class='name'></div><div class='text'></div></div>");
-            $(msg).find('.name').html(v.Author);
-            $(msg).find('.text').html(v.Text);
-            messages.append(msg);
+            var msg = "<div class='msg'><div class='name'>{{Author}}</div><div class='text'>{{Text}}</div></div>";
+            messages.append(Mustache.render(msg, v));
           });
           messages.scrollTop(10000);
         });
