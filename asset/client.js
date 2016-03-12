@@ -9,14 +9,30 @@ $(document).ready(function() {
       .addClass(msg.Room)
       .data('room', msg.Room);
     b.find('input.message').focus();
+
     window.localStorage.room = msg.Room;
+
+    var messages = $("div.chat-window."+msg.Room).find('.messages');
+
+    // Retrieve old messages
+    $.getJSON('/api/rooms/' + msg.Room, function(data) {
+      $.each(data.Messages, function(i, v) {
+        var msg = $("<div class='msg'><div class='name'></div><div class='text'></div></div>");
+        $(msg).find('.name').html(v.Author);
+        $(msg).find('.text').html(v.Text);
+        messages.append(msg);
+      });
+      messages.scrollTop(10000);
+    });
   });
 
   socket.on('message', function(m2) {
-    console.log("Special room message", m2);
+    var messages = $("div.chat-window."+m2.Room).find('.messages');
     if (m2.Room) {
-      var messages = $("div.chat-window."+m2.Room).find('.messages');
-      messages.append("<div class='msg'><div class='name'>" + m2.Name +"</div><div class='text'>"+m2.Msg+"</div></div>");
+      var msg = $("<div class='msg'><div class='name'></div><div class='text'></div></div>");
+      $(msg).find('.name').html(m2.Name);
+      $(msg).find('.text').html(m2.Msg);
+      messages.append(msg);
       messages.scrollTop(10000);
     }
   });
