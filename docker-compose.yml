@@ -1,8 +1,8 @@
 version: '2'
 services:
   web:
-    image: pstuifzand/chat
-    command: /go/src/stuifzand.eu/chat/chat
+    build: .
+    command: /go/src/github.com/pstuifzand/socket-io-chat/socket-io-chat
     ports:
      - "5000:5000"
     depends_on:
