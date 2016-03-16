@@ -125,7 +125,7 @@ func main() {
 	rand.Seed(time.Now().Unix())
 	roomUrlRegex = regexp.MustCompile("^/api/rooms/(room-\\w+)$")
 
-	backend, _ := NewRedisBackend(":7777")
+	backend, _ := NewRedisBackend("redis:6379")
 	defer backend.Close()
 
 	server, err := socketio.NewServer(nil)
